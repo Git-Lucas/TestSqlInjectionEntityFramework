@@ -1,0 +1,6 @@
+@TestSqlInjectionEntityFramework_HostAddress = http://localhost:5159
+
+GET {{TestSqlInjectionEntityFramework_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
