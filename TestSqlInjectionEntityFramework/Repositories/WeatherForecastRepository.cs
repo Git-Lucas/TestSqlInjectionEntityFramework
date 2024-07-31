@@ -10,9 +10,11 @@ public class WeatherForecastRepository(DatabaseContext context)
 
     public async Task<IEnumerable<WeatherForecast>> GetAllBySearchAsync(string textSearch)
     {
-        return await _context.WeatherForecasts
-            .Where(x => x.Summary.Contains(textSearch))
-            .AsNoTracking()
-            .ToListAsync();
+        IQueryable<WeatherForecast> query = _context.WeatherForecasts
+            .FromSqlRaw("SELECT * FROM WeatherForecasts WHERE Summary LIKE '%' + {0} + '%'", textSearch)
+            //.FromSqlRaw($"SELECT * FROM WeatherForecasts WHERE Summary = '{textSearch}';")
+            .AsNoTracking();
+
+        return await query.ToListAsync();
     }
 }
