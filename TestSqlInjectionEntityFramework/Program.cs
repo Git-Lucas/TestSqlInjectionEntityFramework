@@ -1,13 +1,26 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using TestSqlInjectionEntityFramework.Data;
+using TestSqlInjectionEntityFramework.Repositories;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+string connectionStringMySql = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string was not found");
+builder.Services.AddDbContext<DatabaseContext>(options =>
+    options.UseMySql(connectionStringMySql, ServerVersion.AutoDetect(connectionStringMySql)));
+
+builder.Services.AddScoped<WeatherForecastRepository>();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+IServiceScope scope = app.Services.CreateScope();
+DatabaseContext databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+await databaseContext.Database.MigrateAsync();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -16,29 +29,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapPost("/testSqlInjectionInEntityFramework", ([FromServices] WeatherForecastRepository weatherForecastRepository, [FromQuery] string sqlInjectionInSearchText = "1; DELETE FROM WeatherForecasts") =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    return weatherForecastRepository.GetAllBySearchAsync(sqlInjectionInSearchText);
 })
 .WithName("GetWeatherForecast")
 .WithOpenApi();
 
-app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+await app.RunAsync();
