@@ -29,7 +29,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapPost("/testSqlInjectionInEntityFramework", ([FromServices] WeatherForecastRepository weatherForecastRepository, [FromQuery] string sqlInjectionInSearchText = "1; DELETE FROM WeatherForecasts") =>
+app.MapPost("/testSqlInjectionInEntityFramework", ([FromServices] WeatherForecastRepository weatherForecastRepository, [FromQuery] string sqlInjectionInSearchText = "' OR 1=1;") =>
 {
     return weatherForecastRepository.GetAllBySearchAsync(sqlInjectionInSearchText);
 })
